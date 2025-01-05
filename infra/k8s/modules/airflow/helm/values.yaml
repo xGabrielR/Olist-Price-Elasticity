@@ -417,7 +417,7 @@ data:
   # data:
   #   connection: base64_encoded_connection_string
 
-  metadataSecretName: ~
+  metadataSecretName: airflow-metadb-connection-secret
   # When providing secret names and using the same database for metadata and
   # result backend, for Airflow < 2.4.0 it is necessary to create a separate
   # secret for result backend but with a db+ scheme prefix.
@@ -2335,7 +2335,7 @@ cleanup:
 # Configuration for postgresql subchart
 # Not recommended for production
 postgresql:
-  enabled: true # change to false
+  enabled: false # change to false
   auth:
     enablePostgresUser: true
     postgresPassword: postgres

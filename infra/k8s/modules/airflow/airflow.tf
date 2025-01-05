@@ -1,18 +1,20 @@
-resource "kubernetes_namespace" "airflow" {
-  metadata {
-    name = var.airflow_namespace
-  }
-}
-
 resource "kubernetes_namespace" "ingestion" {
   metadata {
     name = "ingestion"
   }
 }
 
-resource "kubectl_manifest" "airflow_github_credentials" {
-  depends_on = [kubernetes_namespace.airflow]
+resource "kubectl_manifest" "airflow_postgres_connection_secret" {
+  yaml_body = templatefile(
+    "${path.module}/manifests/airflow-metadb-connection-secret.yaml",
+    {
+      POSTGRES_CONNECTION = base64encode(var.airflow_metadatabase_connection)
+      AIRFLOW_NAMESPACE   = var.airflow_namespace
+    }
+  )
+}
 
+resource "kubectl_manifest" "airflow_github_credentials" {
   yaml_body = templatefile(
     "${path.module}/manifests/git-credentials-secret.yaml",
     {
@@ -24,8 +26,6 @@ resource "kubectl_manifest" "airflow_github_credentials" {
 }
 
 resource "kubectl_manifest" "airflow_fernet_key" {
-  depends_on = [kubernetes_namespace.airflow]
-
   yaml_body = templatefile(
     "${path.module}/manifests/fernet-key.yaml",
     {
@@ -47,7 +47,6 @@ resource "helm_release" "airflow" {
   namespace = var.airflow_namespace
 
   depends_on = [
-    kubernetes_namespace.airflow,
     kubectl_manifest.airflow_fernet_key,
     kubectl_manifest.airflow_github_credentials
   ]

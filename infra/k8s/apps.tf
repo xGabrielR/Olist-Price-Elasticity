@@ -21,14 +21,25 @@ module "server_mlflow" {
   mlflow_s3_secret_access_key = var.mlflow_s3_secret_access_key
 }
 
+module "postgres_airflow" {
+  source                    = "./modules/postgres_airflow"
+  region                    = var.region
+  airflow_namespace         = var.airflow_namespace
+  airflow_database_user     = var.airflow_database_user
+  airflow_database_password = var.airflow_database_password
+  airflow_database_name     = var.airflow_database_name
+}
+
 module "airflow" {
-  source                       = "./modules/airflow"
-  region                       = var.region
-  airflow_namespace            = var.airflow_namespace
-  airflow_fernet_key           = var.airflow_fernet_key
-  airflow_dags_repo_url        = var.airflow_dags_repo_url
-  airflow_github_username      = var.airflow_github_username
-  airflow_github_token_classic = var.airflow_github_token_classic
+  source                          = "./modules/airflow"
+  depends_on                      = [module.postgres_airflow]
+  region                          = var.region
+  airflow_namespace               = var.airflow_namespace
+  airflow_fernet_key              = var.airflow_fernet_key
+  airflow_dags_repo_url           = var.airflow_dags_repo_url
+  airflow_github_username         = var.airflow_github_username
+  airflow_github_token_classic    = var.airflow_github_token_classic
+  airflow_metadatabase_connection = "postgresql://${var.airflow_database_user}:${var.airflow_database_password}@airflow-database-svc.${var.airflow_namespace}.svc.cluster.local:5432/${var.airflow_database_name}"
 
   # Custom Params - Airflow Variables
   mlflow_tracking_server = "http://server-mlflow.${var.mlflow_namespace}.svc.cluster.local:5000"

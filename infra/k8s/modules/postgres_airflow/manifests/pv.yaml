@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  namespace: airflow
+  name: airflow-postgres-pv
+  labels:
+    type: local
+    app: airflow-database
+spec:
+  storageClassName: manual
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteMany
+  hostPath:
+    path: /mnt/hostdir/airflow_postgresql

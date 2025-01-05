@@ -37,6 +37,13 @@ variable "airflow_github_token_classic" {
   description = "AIRFLOW GitSync Github Token"
 }
 
+variable "airflow_metadatabase_connection" {
+  type        = string
+  sensitive   = true
+  default     = ""
+  description = "AIRFLOW Metadatabase connection string"
+}
+
 variable "mlflow_tracking_server" {
   type        = string
   sensitive   = true

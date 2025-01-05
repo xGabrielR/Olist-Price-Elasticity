@@ -113,6 +113,26 @@ variable "airflow_github_token_classic" {
   description = "AIRFLOW GitSync Github Token"
 }
 
+variable "airflow_database_user" {
+  type        = string
+  sensitive   = true
+  default     = ""
+  description = "AIRFLOW Metadatabase Username"
+}
+
+variable "airflow_database_password" {
+  type        = string
+  sensitive   = true
+  default     = ""
+  description = "AIRFLOW Metadatabase Password"
+}
+
+variable "airflow_database_name" {
+  type        = string
+  sensitive   = true
+  default     = "metadb"
+  description = "AIRFLOW Metadatabase Db name"
+}
 
 variable "host" {
   type = string
