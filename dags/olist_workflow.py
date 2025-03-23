@@ -55,11 +55,23 @@ GLUE_JOB_KWARGS = {
     }
 }
 
+DEFAULT_KUBERNETES_POD_KWARGS = {
+    "in_cluster": True,
+    "namespace": "ingestion",
+    "random_name_suffix": True,
+    "reattach_on_restart": True,
+    "is_delete_operator_pod": True,
+    "image_pull_policy": "Always",
+    "get_logs": True,
+    "log_events_on_failure": False,
+}
+
 DEFAULT_ARGS = {
     "retries": 0,
     "depends_on_past": False,
     "start_date": datetime(2018, 1, 1),
 }
+
 
 @dag(
     catchup=True,
@@ -73,8 +85,27 @@ def OLIST_ML_WORKFLOW():
     start = EmptyOperator(task_id="start")
     end = EmptyOperator(task_id="end")
 
-    pod_python_extractor = EmptyOperator(
-        task_id="pod_python_extractor"
+    pod_python_extractor = KubernetesPodOperator(
+        task_id="pod_python_extractor",
+        image="gabrielrichter/python_pod_extractor:1",
+        name=f"python_pod_extractor",
+        env_vars={
+            "OLTP_CONN_STRING": Variable.get("OLTP_CONN_STRING")
+        },
+        **DEFAULT_KUBERNETES_POD_KWARGS
+    )
+
+    pod_price_elasticity_retrain = KubernetesPodOperator(
+        task_id="pod_price_elasticity_retrain",
+        image="gabrielrichter/price_elasticity_retrain:1",
+        name=f"price_elasticity_retrain",
+        env_vars={
+            "TRAIN_DATE": "{{ execution_date.strftime('%Y-%m-%d') }}",
+            "MLFLOW_TRACKING_SERVER": Variable.get("MLFLOW_TRACKING_SERVER"),
+            "AWS_ACCESS_KEY_ID": Variable.get("AWS_ACCESS_KEY_ID"),
+            "AWS_SECRET_ACCESS_KEY": Variable.get("AWS_SECRET_ACCESS_KEY"),
+        },
+        **DEFAULT_KUBERNETES_POD_KWARGS
     )
 
     glue_job_processing = GlueJobOperator(
@@ -85,26 +116,6 @@ def OLIST_ML_WORKFLOW():
         iam_role_name=DEFAULT_GLUE_IAM_ROLE,
         script_location=DEFAULT_GLUE_SCRIPT_PATH,
         create_job_kwargs=GLUE_JOB_KWARGS,
-    )
-
-    pod_price_elasticity_retrain = KubernetesPodOperator(
-        task_id="pod_price_elasticity_retrain",
-        in_cluster=True,
-        namespace="ingestion",
-        image="gabrielrichter/price_elasticity_retrain:1",
-        name=f"price_elasticity_retrain",
-        random_name_suffix=True,
-        reattach_on_restart=True,
-        is_delete_operator_pod=True,
-        image_pull_policy="Always",
-        get_logs=True,
-        log_events_on_failure=False,
-        env_vars={
-            "TRAIN_DATE": "{{ execution_date.strftime('%Y-%m-%d') }}",
-            "MLFLOW_TRACKING_SERVER": Variable.get("MLFLOW_TRACKING_SERVER"),
-            "AWS_ACCESS_KEY_ID": Variable.get("AWS_ACCESS_KEY_ID"),
-            "AWS_SECRET_ACCESS_KEY": Variable.get("AWS_SECRET_ACCESS_KEY"),
-        }
     )  
 
     start >> pod_python_extractor >> glue_job_processing >> pod_price_elasticity_retrain >> end

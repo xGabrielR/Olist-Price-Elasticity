@@ -31,9 +31,11 @@
 
 Source: Wikipedia.
 
-**Business Problem**: In Olist, products is selled by a people called `seller` and exists some key products to drive sales, such as top 10% or top 20% most selled products, this products can have unique pattern and some mining can be done with this products + orders data. Based on this context, olist is a marketplace and receive a fee (Seller sell products and olist receive maybe 10% ~ 25% of product price), a fee is how a marketplace receive money for joining sellers and customers. The products can have promo, discount, inflation adjust and other random events that change product price, this change can affect demand, people cannot buy more of a given product because the price is very expensive or people will buy a LOT of this product because have a very low price, this phenomenon can be easily seen in traditional grocery, older products have a very low price (in may cases) in promo or with discount to sell very fast because new and fresh products is available on warehouse just waiting to have space in product shelf to be placed and price up again.
+**Business Problem**: In Olist, products is selled by a people called `seller` and exists some key products to drive sales, such as top 10% or top 20% most selled products, this products can have unique pattern and some mining can be done with this products + orders data. Based on this context, olist is a marketplace and receive a fee (Seller sell products and olist receive maybe 10% ~ 25% of product price), a fee is how a marketplace receive money for joining sellers and customers. The products can have promo, discount, inflation adjust and other random events that change product price, this variables changes can affect demand, people cannot buy more of a given product because the price is very expensive or people will buy a LOT of this product because have a very low price, this phenomenon can be easily seen in traditional grocery, older products have a very low price (in may cases) in promo or with discount to sell very fast because new and fresh products is available on warehouse just waiting to have space in product shelf to be placed and price up again.
 
-"A good's price elasticity of demand (PED) is a measure of how sensitive the quantity demanded is to its price. When the price rises, quantity demanded falls for almost any good (law of demand), but it falls more for some than for others. The price elasticity gives the percentage change in quantity demanded when there is a one percent increase in price, holding everything else constant. If the elasticity is −2, that means a one percent price rise leads to a two percent decline in quantity demanded. Other elasticities measure how the quantity demanded changes with other variables (e.g. the income elasticity of demand for consumer income changes)".   
+Is possible to see a event called "greve dos caminhoneiros no Brasil" (https://oglobo.globo.com/economia/com-greve-de-caminhoneiros-supermercados-ficam-sem-estoque-precos-disparam-na-feira-22708506), is possible to see in the reference text a paragraph: "*Só vem trabalhar quem tem coragem, porque as verduras aumentaram 100%. A caixa de alface saía por R$ 10. Comprei por R$ 60 — contou Adolfo Almeida, verdureiro há 25 anos.*". The truck driver in Brazil stop working dude the high gas price, this impact the grocery store, the store not receiving new products and the remaining ones have a very high price, in this example, a product called "alface" have a price increase by 83%.
+
+"A good's price elasticity of demand (PED) is a measure of how sensitive the quantity demanded is to its price. When the price rises, quantity demanded falls for almost any good (law of demand), but it falls more for some than for others. The price elasticity gives the percentage change in quantity demanded when there is a one percent increase in price, holding everything else constant. If the elasticity is **−2**, that means a **one percent price rise leads to a two percent decline in quantity demanded**. Other elasticities measure how the quantity demanded changes with other variables (e.g. the income elasticity of demand for consumer income changes)".   
 
 Source: Wikipedia.
 
@@ -48,7 +50,10 @@ Now, you need to build a infrastructure and a solution in weekly basis scenario 
 
 ---
 
-The solution strategy is to build a most simple data infrastructure to solve this problem, I selected key AWS services and Open Source tools to design a infrastructure for: data engineering (collect, conform and prepare data), data science (build price elasticity solution + eda + final delivery product) and mlops (re-train and version price elasticity solutions estimators).
+The solution strategy is to build a most simple data infrastructure to solve this problem, I selected key AWS services and Open Source tools to design a infrastructure for:
+- *data engineering* (build infrastructure, collect, conform and prepare data).
+- *data science* (build price elasticity solution, generate eda for top products and build final delivery product such as web interface or API).
+- *mlops* (build a solution for re-train and version price elasticity solutions estimators for audity and history archive).
 
 ### 2.1. Problem Solving Methodology
 
@@ -175,20 +180,21 @@ Mind Map is a tool to help in feature engineering and integrate teams, is a very
 
 ---
 
-The main ideia is to use develop a architecture with AWS, Kubernetes and other Open Source Tools. All tools (aws service and kubernetes deployments) is deployed using Hashicorp Terraform.
+The main ideia is to develop a architecture with AWS, Kubernetes and other Open Source Tools, the main architect of hardware is created with Terraform.
+Inside of the hardware created with terraform, other automations can be done with terraform, such as kubernetes helm and pods deployment, this automations is done with terraform modules of each software tool that i have choosed (airflow, jupyter, streamlit, mlflow...).  
 
 <img src="assets/workflow.png">
 
-I use K8s open source tools: Airflow, Jupyter, Mlflow, Streamlit.
+For build a weekly price elasticity re-train pipeline is necessary tools and solutions from mlops tool belt and integrate data from data engineer world, in other words, automate the extraction from RAW data to fonal data science data product, the streamlit serving app with model versioning and audity of elasticity week over week.
 
-For build a weekly price elasticity versioning pipeline, from RAW data to Streamlit serving App. The Data and ML Artifacts is stored in Aws S3 and i use Aws Athena for query the data, joining K8s with Aws Cloud to delivery a Weekly pipeline to compare Price Elasticity from Olist. 
+The Data and ML Artifacts is stored in Aws S3 using mlflow and i use Aws Athena for query the data, joining K8s with Aws Cloud to delivery a weekly pipeline to compare Price Elasticity from Olist top products. 
 
 - Jupyer Lab Notebook: One of the Jupyter solutions is a "notebook", a notebook is a webserver IDE supporting a lot of "kernels" (backends), python, julia, R... For this project i get one webserver and deploy in a K8s POD. This pod connect to Aws Athena for fetch trusted and curated data for Data Science exploration.
 - Airflow Stack: Airflow is an open source project for orchestrating workflows with a use community support connections (Aws, K8s, ...). Workflows are designed in a Direct acyclic graph (DAG) way, for this project i use Airflow to schedule in a weekly basis Data Engineering pipeline and Machine Learning re-train.
 - Mlflow Server: Mlflow is a Python framework for standardize ML lifecycle. With this With this tool I can version, publish and manage trained estimators from Sklearn, Keras, Spark, and others...
 - Streamlit: The final product of my project is a simple Streamlit App in a K8s deployment. In this app the user can select any product and any training date to validate and compare results for multiple versioned machine learning models.
 
-Now, in AWS i used some key services:
+In AWS I used some key services:
 
 Aws S3 for object Storage in three consumption layers (landing, trusted and curated).
 
@@ -197,6 +203,12 @@ Aws S3 for object Storage in three consumption layers (landing, trusted and cura
 - trusted: Trusted is another layer. The main objective of this layer is get the data from previous layer (raw) and apply cleaning, conformation, unification os multiple raw tables into one clean and complete table, this table is called OBT (One Big Table). This data is "Trusted", you can use for answer business questions.
 - curated: Trusted is the final layer. You have some clean and
 conformed tables in trusted layer, now you can use this data and answer business questions, create aggregations, sums, counts... Is possible to write the business question table in a layer called curated OR use tools such as Aws Athena (Data Virtualization Engine) to query trusted tables and fetch results.
+
+Aws Glue for data processing raw data between data layers (raw, trusted and curated).
+
+Aws EKS for deploy EKS cluster with EBS storage addon.
+
+Aws ELB for serving the endpoints of pods created inside AWS EKS cluster.
 
 ### 4.1. OLTP and ETL
 
@@ -254,6 +266,8 @@ The airflow will execute batch extraction from source system (OLTP), Aws Glue fo
 The main objective is to build a end-to-end re-train price elasticity solution to follow price variation over multiple weeks and give a business user a tool to compare price elasticity between weeks and products.
 
 <img src="assets/price_x_demand.gif">
+
+With this solution, the end user can track and compare price elasticity solution and audity machine learning model versions in weekly over weekly perspective. 
 
 
 ## 6.0. Next Steps
